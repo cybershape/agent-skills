@@ -119,6 +119,3 @@ ast-grep run --pattern 'function $NAME($$$) { $$$ }' --lang js path/ --json \
 - **Editing**: See [references/editing.md](references/editing.md) for rewrite, rename, and YAML rules
 - **Workflows**: See [references/workflows.md](references/workflows.md) for common workflows
 
-## Troubleshooting
-
-- `ast-grep not found` : install via `brew install ast-grep`

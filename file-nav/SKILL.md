@@ -10,23 +10,6 @@ Use **fd** for finding files and navigating directory structures. fd is a fast, 
 
 ## Prerequisites
 
-If `fd` is not installed, recommend the user install it:
-
-```bash
-# Arch Linux
-sudo pacman -S fd
-
-# Ubuntu/Debian (note: binary is 'fdfind', alias to 'fd')
-sudo apt install fd-find
-alias fd=fdfind
-
-# macOS
-brew install fd
-
-# Cargo
-cargo install fd-find
-```
-
 ## Quick Reference
 
 | Task | Command |

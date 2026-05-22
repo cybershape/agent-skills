@@ -177,10 +177,6 @@ clj-nrepl-eval -p <port> "(require '[clojure.pprint :as pp]) (with-out-str (pp/p
 
 ## Troubleshooting
 
-**clj-nrepl-eval not found:**
-
-Run `bash ./install.sh` in this skills folder and act on output.
-
 **No REPL found:**
 
 - Ensure a Clojure REPL is running with nREPL server

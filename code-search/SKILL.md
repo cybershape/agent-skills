@@ -10,22 +10,6 @@ Use **ripgrep (`rg`)** for searching patterns inside file contents. For finding 
 
 ## Prerequisites
 
-If `rg` is not installed, recommend the user install it:
-
-```bash
-# Arch Linux
-sudo pacman -S ripgrep
-
-# Ubuntu/Debian
-sudo apt install ripgrep
-
-# macOS
-brew install ripgrep
-
-# Cargo
-cargo install ripgrep
-```
-
 ## Quick Reference
 
 | Task | Command |

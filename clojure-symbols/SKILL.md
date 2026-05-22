@@ -119,7 +119,3 @@ clj-kondo --lint bases components \
 - **clj-kondo details**: See [references/kondo.md](references/kondo.md) for full analysis options
 - **REPL introspection**: See [references/repl.md](references/repl.md) for REPL commands
 - **Editing/renaming**: See [references/editing.md](references/editing.md) for rename workflows
-
-## Troubleshooting
-
-- `clj-kondo not found` : install using `brew install borkdude/brew/clj-kondo`
