@@ -7,10 +7,6 @@ description: Interact with running Clojure REPLs via nREPL. Evaluate Clojure cod
 
 This skill enables interaction with running Clojure systems via nREPL using the `clj-nrepl-eval` CLI tool.
 
-## Pre-flight Check
-
-Run `which clj-nrepl-eval`. If not found, prompt user to run `./install.sh` in this skills folder.
-
 ## When to Use This Skill
 
 **Use this skill when you need to:**
@@ -180,6 +176,10 @@ clj-nrepl-eval -p <port> "(require '[clojure.pprint :as pp]) (with-out-str (pp/p
 ```
 
 ## Troubleshooting
+
+**clj-nrepl-eval not found:**
+
+Run `bash ./install.sh` in this skills folder and act on output.
 
 **No REPL found:**
 

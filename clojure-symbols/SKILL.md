@@ -12,36 +12,23 @@ For non-Clojure languages, use the `code-symbols` skill instead.
 
 ## Prerequisites
 
-### clj-kondo
-
-```bash
-# Arch Linux
-sudo pacman -S clj-kondo
-
-# Homebrew
-brew install borkdude/brew/clj-kondo
-
-# Script
-curl -sLO https://raw.githubusercontent.com/clj-kondo/clj-kondo/master/script/install-clj-kondo
-chmod +x install-clj-kondo && ./install-clj-kondo
-```
-
 ### clj-nrepl-eval
 
 Discover running nREPL servers:
+
 ```bash
 clj-nrepl-eval --discover-ports
 ```
 
 ## Quick Reference
 
-| Task | Tool | Command |
-|------|------|---------|
+| Task                 | Tool      | Command                                      |
+| -------------------- | --------- | -------------------------------------------- |
 | List symbols in file | clj-kondo | `clj-kondo --lint file.clj --config '{...}'` |
-| Find definition | clj-kondo | Filter `var-definitions` by name |
-| Find usages | clj-kondo | Filter `var-usages` by name |
-| Get var metadata | REPL | `(meta #'ns/var)` |
-| Get source | REPL | `(clojure.repl/source fn)` |
+| Find definition      | clj-kondo | Filter `var-definitions` by name             |
+| Find usages          | clj-kondo | Filter `var-usages` by name                  |
+| Get var metadata     | REPL      | `(meta #'ns/var)`                            |
+| Get source           | REPL      | `(clojure.repl/source fn)`                   |
 
 ## Core clj-kondo Commands
 
@@ -74,12 +61,14 @@ clj-kondo --lint path/to/file.clj \
 ### Output Fields
 
 **var-definitions:**
+
 - `filename`, `row`, `col`, `end-row`, `end-col` - Location
 - `ns`, `name` - Identity
 - `defined-by` - Defining form (e.g., `clojure.core/defn`)
 - `fixed-arities`, `doc`, `private`
 
 **var-usages:**
+
 - `from`, `to` - Source and target namespaces
 - `name`, `arity` - Symbol name and call arity
 - `from-var` - Containing function
@@ -130,3 +119,7 @@ clj-kondo --lint bases components \
 - **clj-kondo details**: See [references/kondo.md](references/kondo.md) for full analysis options
 - **REPL introspection**: See [references/repl.md](references/repl.md) for REPL commands
 - **Editing/renaming**: See [references/editing.md](references/editing.md) for rename workflows
+
+## Troubleshooting
+
+- `clj-kondo not found` : install using `brew install borkdude/brew/clj-kondo`

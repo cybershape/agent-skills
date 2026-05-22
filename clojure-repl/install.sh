@@ -5,12 +5,12 @@ set -e
 
 # Check prerequisites
 if ! command -v bb &> /dev/null; then
-  echo "Error: Babashka (bb) is required. Install via: devbox shell"
+  echo "Error: Babashka (bb) is required. Install via: brew install borkdude/brew/babashka"
   exit 1
 fi
 
 if ! command -v bbin &> /dev/null; then
-  echo "Error: bbin is required. Install via: devbox shell"
+  echo "Error: bbin is required. Install via: brew install babashka/brew/bbin"
   exit 1
 fi
 
@@ -25,12 +25,12 @@ else
 fi
 
 # Install clj-paren-repair-claude-hook (auto-invoked by Claude hook on file writes)
-if command -v clj-paren-repair-claude-hook &> /dev/null; then
-  echo "clj-paren-repair-claude-hook already installed"
-else
-  echo "Installing clj-paren-repair-claude-hook..."
-  bbin install "$REPO" --as clj-paren-repair-claude-hook
-fi
+# if command -v clj-paren-repair-claude-hook &> /dev/null; then
+#   echo "clj-paren-repair-claude-hook already installed"
+# else
+#   echo "Installing clj-paren-repair-claude-hook..."
+#   bbin install "$REPO" --as clj-paren-repair-claude-hook
+# fi
 
 # Install clj-paren-repair (manual paren repair)
 if command -v clj-paren-repair &> /dev/null; then
