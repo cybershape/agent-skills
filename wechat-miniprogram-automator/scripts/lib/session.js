@@ -7,6 +7,13 @@ const {
   resolvePath,
 } = require('./args')
 
+const LAUNCH_RETRYABLE_PATTERNS = [
+  'port is in use',
+  'http port is open',
+  'another project',
+  'timed out',
+]
+
 function resolveProjectPath(flags) {
   const projectPath = getFlag(flags, 'project-path')
   return resolvePath(projectPath) || process.cwd()
@@ -55,6 +62,15 @@ function loadAutomator(projectPath) {
   }
 }
 
+function isLaunchRetryable(error) {
+  const message = (error && error.message) ? error.message : ''
+  return LAUNCH_RETRYABLE_PATTERNS.some((pattern) => message.includes(pattern))
+}
+
+async function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 function normalizeSessionOptions(flags) {
   const mode = String(getFlag(flags, 'mode', 'auto'))
   const projectPath = resolveProjectPath(flags)
@@ -66,6 +82,8 @@ function normalizeSessionOptions(flags) {
   const ticket = getFlag(flags, 'ticket')
   const cleanup = String(getFlag(flags, 'cleanup', 'auto'))
   const projectConfig = readJsonInput(flags, 'project-config-json', 'project-config-file', 'project config JSON')
+  const retryCount = asNumber(getFlag(flags, 'retry-count'), 'retry-count') ?? 2
+  const retryDelayMs = asNumber(getFlag(flags, 'retry-delay-ms'), 'retry-delay-ms') ?? 10000
 
   if (!['auto', 'connect', 'launch'].includes(mode)) {
     throw new Error(`Unsupported --mode value: ${mode}`)
@@ -83,10 +101,37 @@ function normalizeSessionOptions(flags) {
     port,
     projectConfig,
     projectPath,
+    retryCount,
+    retryDelayMs,
     ticket,
     timeout,
     wsEndpoint,
   }
+}
+
+async function tryLaunch(automator, launchOptions, options) {
+  let lastError
+  const maxAttempts = 1 + (options.retryCount || 0)
+  const delayMs = options.retryDelayMs || 10000
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      const miniProgram = await automator.launch(launchOptions)
+      return { miniProgram, retryAttempts: attempt }
+    } catch (error) {
+      lastError = error
+      if (attempt < maxAttempts - 1 && isLaunchRetryable(error)) {
+        process.stderr.write(
+          `[session] Launch attempt ${attempt + 1} failed: ${error.message}. ` +
+          `Retrying in ${delayMs}ms (${maxAttempts - attempt - 1} left)...\n`
+        )
+        await sleep(delayMs)
+      } else {
+        throw error
+      }
+    }
+  }
+  throw lastError
 }
 
 async function openSession(flags) {
@@ -111,6 +156,7 @@ async function openSession(flags) {
   let miniProgram
   let usedMode
   let connectError
+  let retryAttempts = 0
 
   if (options.mode === 'connect') {
     if (!options.wsEndpoint) {
@@ -119,7 +165,9 @@ async function openSession(flags) {
     miniProgram = await automator.connect(connectOptions)
     usedMode = 'connect'
   } else if (options.mode === 'launch') {
-    miniProgram = await automator.launch(launchOptions)
+    const result = await tryLaunch(automator, launchOptions, options)
+    miniProgram = result.miniProgram
+    retryAttempts = result.retryAttempts
     usedMode = 'launch'
   } else {
     if (options.wsEndpoint) {
@@ -132,8 +180,21 @@ async function openSession(flags) {
     }
 
     if (!miniProgram) {
-      miniProgram = await automator.launch(launchOptions)
-      usedMode = 'launch'
+      try {
+        const result = await tryLaunch(automator, launchOptions, options)
+        miniProgram = result.miniProgram
+        retryAttempts = result.retryAttempts
+        usedMode = 'launch'
+      } catch (launchError) {
+        if (connectError) {
+          throw new Error(
+            `Both connect and launch failed. ` +
+            `Connect: ${connectError.message}. ` +
+            `Launch: ${launchError.message}`
+          )
+        }
+        throw launchError
+      }
     }
   }
 
@@ -144,6 +205,7 @@ async function openSession(flags) {
     miniProgram,
     options,
     resolvedFrom,
+    retryAttempts,
     usedMode,
   }
 }
@@ -170,7 +232,7 @@ async function cleanupSession(session) {
 }
 
 function sessionSummary(session) {
-  return {
+  const summary = {
     cleanup: session.options.cleanup,
     connectError: session.connectError
       ? {
@@ -182,6 +244,10 @@ function sessionSummary(session) {
     resolvedFrom: session.resolvedFrom,
     usedMode: session.usedMode,
   }
+  if (session.retryAttempts) {
+    summary.retryAttempts = session.retryAttempts
+  }
+  return summary
 }
 
 module.exports = {

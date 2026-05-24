@@ -50,7 +50,8 @@ Start with the smallest reference that matches the task:
 
 - existing healthy automation endpoint -> `scripts/session.js` with `--mode connect` or `--mode auto`
 - no running endpoint, or unstable reused session -> `scripts/session.js` or `scripts/run-flow.js` with `--mode launch` or `--mode auto`
-- port conflict -> choose a different port
+- port conflict -> choose a different port; the launch helper retries on port-conflict errors (default: 2 retries, 10s apart)
+- **prefer session reuse**: launch once with `--cleanup none`, then reuse across commands with `--mode connect --ws-endpoint ws://localhost:PORT --cleanup disconnect`. DevTools takes 8–15s to fully release after `close()`, making repeated launch/close cycles slow and flaky.
 
 ### Routing
 

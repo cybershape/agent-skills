@@ -316,3 +316,4 @@ On failure, the script prints JSON with `ok: false` and an error object to stder
 - If route helpers are flaky, use `scripts/navigate.js --strategy evaluate --verify-route ...` or the equivalent flow step.
 - If the task needs long async page logic, combine `runtime.js --action evaluate` with later checks, or encode the whole scenario in `run-flow.js`.
 - Restore mocked APIs before final cleanup.
+- **Avoid repeated launch/close cycles.** DevTools needs 8–15s to fully release after `close()`. For multiple independent commands, launch once with `--cleanup none` and reuse via `--mode connect --ws-endpoint ws://localhost:PORT --cleanup disconnect`. The scripts now auto-retry launches on port-conflict errors (`--retry-count 2` by default).

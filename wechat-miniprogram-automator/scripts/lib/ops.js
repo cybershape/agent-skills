@@ -67,8 +67,18 @@ async function resolveElement(context, { selector, selectorChain } = {}) {
   }
 
   let current = await page.$(chain[0])
+  if (!current) {
+    throw new Error(`Element not found for selector "${chain[0]}"`)
+  }
   for (let index = 1; index < chain.length; index += 1) {
-    current = await current.$(chain[index])
+    const next = await current.$(chain[index])
+    if (!next) {
+      throw new Error(
+        `Element not found at selector chain depth ${index + 1}: ` +
+        `"${chain.slice(0, index + 1).join(' -> ')}"`
+      )
+    }
+    current = next
   }
 
   return current
@@ -487,8 +497,13 @@ async function runFlowStep(context, step) {
   if (action === 'assertPageData') {
     const page = await ensureCurrentPage(context)
     const actual = await page.data(step.path)
-    if (JSON.stringify(actual) !== JSON.stringify(step.equals)) {
-      throw new Error(`assertPageData failed for path ${step.path}`)
+    const actualJson = JSON.stringify(actual)
+    const expectedJson = JSON.stringify(step.equals)
+    if (actualJson !== expectedJson) {
+      throw new Error(
+        `assertPageData failed for path "${step.path}": ` +
+        `expected ${expectedJson}, got ${actualJson}`
+      )
     }
     return { equals: step.equals, path: step.path, value: actual }
   }

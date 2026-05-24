@@ -167,7 +167,9 @@ function sessionHelpText() {
   --project-config-json JSON      JSON overrides for project.config.json.
   --project-config-file FILE      JSON file overrides for project.config.json.
   --cleanup auto|close|disconnect|none
-                                  Cleanup strategy. Default: auto.`
+                                  Cleanup strategy. Default: auto.
+  --retry-count NUMBER            Max launch retries on port-conflict errors. Default: 2.
+  --retry-delay-ms MS             Delay between launch retries. Default: 10000.`
 }
 
 module.exports = {

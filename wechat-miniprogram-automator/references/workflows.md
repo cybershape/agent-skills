@@ -6,6 +6,17 @@ Use it when you are actively running an automation task. Prefer the shipped JS s
 
 For script names and flags, see [scripts.md](scripts.md).
 
+## 0. Critical operational facts
+
+These reflect real-world testing on macOS with DevTools `1.06.x` and `miniprogram-automator 0.12.x`.
+
+- **DevTools needs ~8–15s to fully release after `close()`.** Back-to-back `launch()` calls on different ports will fail with "http port is open" or "port is in use" if the previous DevTools window is still shutting down.
+- **The `--retry-count` flag mitigates this** — the launch helper now retries on port-conflict errors (default: 2 retries, 10s apart). Increase to 4–5 for CI.
+- **Prefer session reuse over repeated launch/close cycles.** For multi-step scenarios, use `run-flow.js`. For multiple independent commands, launch once with `--cleanup none`, then reuse with `--mode connect --ws-endpoint ws://localhost:PORT --cleanup disconnect`.
+- **Pass the project root** (the directory containing `project.config.json`), not the `miniprogram/` subdirectory. The `project.config.json`'s `miniprogramRoot` field is read by DevTools internally.
+- **DevTools must be open** before the CLI `auto` command can complete. If DevTools hasn't been opened before, the first launch may take longer as it initializes.
+- **macOS CLI path**: `/Applications/wechatwebdevtools.app/Contents/MacOS/cli`
+
 ## 1. Default execution policy
 
 Prefer this order:
@@ -174,6 +185,42 @@ Use when you need to:
 This should be the default choice for any non-trivial scenario.
 
 ## 4. Baseline simulator workflow
+
+### Session reuse (recommended for multiple commands)
+
+For running several independent scripts against the same project, avoid the cost of repeated launch/close cycles:
+
+```bash
+# Step 1: Launch once and keep the session alive
+node <skill-dir>/scripts/session.js \
+  --mode launch \
+  --project-path "$PWD" \
+  --port 9420 \
+  --cleanup none
+
+# Steps 2–N: Connect and reuse, disconnect when done
+node <skill-dir>/scripts/navigate.js \
+  --mode connect \
+  --ws-endpoint ws://localhost:9420 \
+  --cleanup disconnect \
+  --method reLaunch \
+  --url /pages/home/index
+
+node <skill-dir>/scripts/element.js \
+  --mode connect \
+  --ws-endpoint ws://localhost:9420 \
+  --cleanup disconnect \
+  --action tap \
+  --selector .submit-button
+
+# Final step: close the session
+node <skill-dir>/scripts/session.js \
+  --mode connect \
+  --ws-endpoint ws://localhost:9420 \
+  --cleanup close
+```
+
+### Basic flow file
 
 For a typical multi-step simulator run, prefer a flow file.
 
