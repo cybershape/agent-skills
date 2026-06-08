@@ -14,7 +14,8 @@ description: >
 Create a temporary directory under `/tmp`, convert the PDF into PNG pages there, and reference that path throughout the workflow.
 
 ```bash
-tmpdir=$(mktemp -d /tmp/pdf-conversation-XXXXXXXX)
+ts=$(python3 -c "import time; print(int(time.time()*1000))")
+tmpdir=$(mktemp -d "/tmp/pdf-conversation-${ts}")
 pdftoppm -png -r 200 "/path/to/input.pdf" "$tmpdir/page"
 ```
 

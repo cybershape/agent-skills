@@ -8,7 +8,7 @@ allowed-tools: Bash, Read, Edit, Task
 
 Use **clj-kondo** for static analysis and **clj-nrepl-eval** for REPL introspection to find Clojure symbols.
 
-For non-Clojure languages, use the `code-symbols` skill instead.
+For non-Clojure languages, use other tools/skills instead.
 
 ## Prerequisites
 
