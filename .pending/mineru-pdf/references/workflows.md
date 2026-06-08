@@ -7,7 +7,7 @@ cd <target-directory>
 bash ~/.agents/skills/mineru-pdf/scripts/convert.sh '<path/to/document.pdf>'
 ```
 
-The script archives original → converts → copies markdown → cleans temp files.
+The script archives original → converts → copies markdown + images → cleans temp files.
 
 **After the script finishes, the model must read the generated .md and manually fix conversion artifacts.** See SKILL.md "Post-processing — model must do this" for the checklist.
 
@@ -35,7 +35,8 @@ Then post-process each `.md` file individually.
 
 ## Conversion with custom backend
 
-When hybrid-auto-engine produces poor results (complex scanned documents, heavy image-based PDFs), try `pipeline`:
+When hybrid-auto-engine produces poor results (complex scanned documents, heavy image-based PDFs), try `pipeline`.  
+Note: custom backend conversions must manually copy both `.md` and `images/`:
 
 ```bash
 PDF_PATH="/path/to/doc.pdf"
@@ -44,8 +45,13 @@ rm -rf /tmp/mineru
 NO_PROXY="127.0.0.1" ~/src/mineru-env/.venv/bin/mineru \
   -p "$PDF_PATH" -o /tmp/mineru \
   -b pipeline -l ch
+# Copy markdown
 MD_FILE="$(find /tmp/mineru -name '*.md' -type f | head -1)"
 cp "$MD_FILE" "./$PDF_NAME.md"
+# Copy images
+IMG_DIR="$(find /tmp/mineru -type d -name images | head -1)"
+if [ -n "$IMG_DIR" ]; then cp -r "$IMG_DIR" "./images"; fi
+# Clean up
 rm -rf /tmp/mineru
 ```
 

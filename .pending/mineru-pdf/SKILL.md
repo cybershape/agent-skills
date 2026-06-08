@@ -11,12 +11,37 @@ Convert PDF documents to Markdown using MinerU's hybrid-auto engine (OCR + layou
 
 MinerU environment at `~/src/mineru-env/.venv/bin/mineru`. If absent, the skill cannot operate.
 
+## ⏱ Timeout
+
+MinerU conversion is **slow** — expect ~20 min for a 50-page PDF on Apple Silicon M1 Pro.
+The script prints timestamped progress markers (`[HH:MM:SS]`) at each step so the
+model can observe that it's still running.
+
+**Caller must set a generous timeout** on the bash tool call (e.g. `timeout: 3600`).
+For batch conversions, use `--api` mode (avoids cold start per file — the model
+loads once and is reused, reducing total time).
+
+The script's progress output looks like:
+
+```
+=== [11:13:38] Archive original ===
+=== [11:13:38] Convert via mineru ===
+<MinerU progress bars stream here>
+  [11:32:56] MinerU conversion completed
+=== [11:32:56] Copy markdown ===
+  [11:32:56] Markdown copied: ...md
+=== [11:32:56] Copy images ===
+  [11:32:56] 40 images copied to .../images/
+=== [11:32:56] Clean temp files ===
+=== [11:32:56] Done in 1163s ===
+```
+
 ## Workflow
 
 ### Single file conversion
 
-1. Run `scripts/convert.sh` — archives original, converts via mineru, copies markdown to current dir, cleans `/tmp/mineru`
-2. **Model does post-processing** — read the generated markdown and manually fix conversion artifacts
+1. Run `scripts/convert.sh` — archives original, converts via mineru, copies `.md` + `images/` to current dir, cleans `/tmp/mineru`
+2. **Model does post-processing** — read the generated markdown and fix artifacts; verify images render
 
 ### Sequential conversion (faster — reuse model across files)
 
@@ -27,7 +52,7 @@ Process each PDF completely — convert, post-process, verify — before moving 
 2. For each PDF:
    a. Run `scripts/convert.sh --api <url>` — reuses the loaded model, no cold start
    b. Read the generated `.md` and fix conversion artifacts (see [Post-processing](#post-processing))
-   c. Verify the result against the original PDF if needed
+   c. Verify images match the original PDF if needed
    d. Only proceed to the next PDF when the current one is clean
 3. Kill the server when done
 
@@ -35,7 +60,7 @@ The script does NOT do post-processing. Post-processing is the model's responsib
 
 ## Scripts
 
-### `scripts/convert.sh` — converts, archives, cleans. No post-processing.
+### `scripts/convert.sh` — converts, archives, copies images, cleans. No post-processing.
 
 ```bash
 # Single file (starts/stops temp server automatically)
@@ -52,7 +77,18 @@ What the script does:
 2. Copies original PDF → `original/`
 3. Runs mineru (output → `/tmp/mineru/`)
 4. Copies generated `.md` → current directory
-5. Removes `/tmp/mineru/`
+5. Copies `images/` directory → current directory (if mineru extracted any)
+6. Removes `/tmp/mineru/`
+
+Output layout after conversion:
+
+```
+<target-dir>/
+  <pdfname>.md          # Generated markdown
+  images/               # Extracted images (referenced as images/* in .md)
+  original/
+    <pdfname>.pdf       # Archived original PDF
+```
 
 ### Sequential conversion with API server
 
@@ -88,6 +124,7 @@ Scenarios:
 - Company branding leaked into text (e.g. `## D大鹏教育` splitting a paragraph)
 - Page number lines, document title repeated on every page
 - Footer text ("人力资源中心", "2022年X月X日") appearing mid-document
+- Repeated TOC entries (目录 / 现状分析 / 影响因素 / 迭代内容) bleeding into page content
 
 **Fix**: Remove the watermark line and merge the surrounding paragraph fragments back into one coherent paragraph.
 
@@ -109,15 +146,17 @@ A single paragraph may be broken into fragments by a page break. MinerU sometime
 
 - The same paragraph appearing twice (once as raw text, once inside a table)
 - Section headings duplicated (once from the TOC, once from the body)
+- Backup/repeat sections from page header artifacts
 
 **Fix**: Deduplicate, keeping only the body occurrence.
 
 ### 5. Heading level inconsistency
 
 - `##` (H2) used for all headings regardless of nesting depth
+- Split headings: a single logical heading broken into two `##` lines by a page break (e.g. `## 从设计学院来看，` followed by `## 9月份以后退费率大幅提升...`)
 - Sub-items (㈠ ㈡ ㈢) should be `###` if they logically nest under a parent `##`
 
-**Fix**: Adjust heading levels to match the document's logical outline. Only change if the original PDF's structure clearly warrants it.
+**Fix**: Merge split headings. Adjust heading levels to match the document's logical outline.
 
 ### 6. Excessive blank lines
 
@@ -132,7 +171,21 @@ A single paragraph may be broken into fragments by a page break. MinerU sometime
 
 **Fix**: Restore proper markdown list formatting.
 
-### 8. 清理工作目录
+### 8. OCR typos in data fields
+
+- Inconsistent spelling of the same term across tables (e.g. `借好付` vs `倍好付`, '象刻学院' vs '篆刻学院')
+- Chinese characters misrecognized in table headers or data
+
+**Fix**: Check for consistent spelling of proper nouns across the document. Use the most common occurrence or the correct term if known.
+
+### 9. Image references broken or missing
+
+- Markdown references `images/xxx.jpg` but the file may be missing from `images/` directory
+- Image filenames in markdown don't match any file on disk
+
+**Fix**: Read the file and verify all `![](images/...)` references have corresponding files in the `images/` directory. If images are missing, re-run the conversion ensuring the script's Step 4 (copy images) completes successfully.
+
+### 10. 清理工作目录
 
 全部转换完成后，清理 server 遗留的产物：
 
