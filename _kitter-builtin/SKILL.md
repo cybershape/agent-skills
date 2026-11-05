@@ -1,6 +1,6 @@
 ---
 name: kitter
-description: Use Kitter CLI to manage a reusable skill library, add or adopt skill sources, install them globally or per project, inspect effective skills, organize the library, and maintain updates. Applies Kitter's minimal-global, project-first best practice.
+description: Use Kitter CLI to manage a reusable skill library, add or adopt skill sources, install them globally or per project, inspect effective skills, organize the library, bundle skills and AGENTS.md instructions into presets, and maintain updates. Applies Kitter's minimal-global, project-first best practice.
 disable-model-invocation: true
 metadata:
   opencode:
@@ -71,6 +71,15 @@ kitter read <skill> SKILL.md
 
 Use the skill name when it is unique. If multiple skills share a name, `kitter list` displays an `id:<value>` selector; use that selector in later commands to choose the exact skill.
 
+To customize a skill's description in Kitter:
+
+```bash
+kitter describe <skill> "My description"
+kitter describe <skill> --reset
+```
+
+An empty or whitespace-only description also restores the original. `list` and `show` display the custom description when set. This does not change the skill's instructions or `SKILL.md`.
+
 ## Add skills to Kitter
 
 ### Add a new source
@@ -80,7 +89,10 @@ Add skills from a local folder:
 ```bash
 kitter add local /path/to/skills
 kitter add local /path/to/skills --skill skill-a --skill skill-b
+kitter add local /path/to/skills --copy
 ```
+
+Local skills are linked by default, so edits take effect immediately. Use `--copy` to keep an independent copy in Kitter. Run `kitter check` to detect source changes, then `kitter update <skill>` to copy them again. If the original folder is removed, the copy remains usable.
 
 Add from GitHub or a skills.sh-compatible source:
 
@@ -159,7 +171,22 @@ kitter install <skill> \
   --target codex
 ```
 
-Available targets include `universal`, `codex`, `claude`, `cursor`, `opencode`, `pi`, `grok`, `antigravity`, `droid`, and `copilot`. Repeat `--target` to install into several targets in one operation.
+Built-in Agent ids are `codex`, `claude-code`, `cursor`, `opencode`, `pi`, `omp`, `dimagent`, `grok`, `openclaw`, `hermes`, `droid`, `amp`, `antigravity`, `copilot`, and `trae`. Only Agents with an install target accept `--target`; `universal` is the shared target. Repeat `--target` to install into several targets in one operation. Use `universal` for DimAgent; omp supports both `universal` and `omp`. The legacy alias `claude` still works; use `claude-code` in new commands. JSON `agent` and `target` fields use canonical ids such as `claude-code`.
+
+## Agents
+
+Run `kitter agents` to see available Agents and plugin errors. Manage them with:
+
+```bash
+kitter agents add <github-url|path> [--only <id>]
+kitter agents update [<id>]
+kitter agents remove <id>
+kitter agents enable <id>
+kitter agents disable <id>
+kitter agents move <id> --before <id>
+```
+
+Disabled Agents are hidden from project inspection and cannot be install targets. When the user needs an Agent that Kitter does not support, or wants to change a built-in one, read [references/agent-plugins.md](references/agent-plugins.md).
 
 ## Common workflows
 
@@ -248,6 +275,60 @@ kitter list --tag testing
 
 If tags with the same name exist under different parents, use the `id:<value>` selector shown by `kitter tag list`.
 
+## Use presets
+
+A preset bundles library skills with optional AGENTS.md content and text files so a project can be set up in one step. Use presets when several projects share the same stack or team conventions.
+
+```bash
+kitter preset create frontend
+kitter preset add frontend react typescript
+kitter preset agents-md frontend --set AGENTS.frontend.md
+kitter preset install frontend --project /path/to/project --target universal
+```
+
+Installing a preset links its skills into the project and appends its AGENTS.md content to the project's `AGENTS.md` inside a managed block. Content outside that block belongs to the user and is never changed. User-scope installations (`--project "$HOME"`) omit AGENTS.md and the other instruction files.
+
+Add text files at project-relative paths. Use UTF-8 text; set AGENTS.md with `agents-md` instead. Kitter does not interpret links or references inside AGENTS.md.
+
+```bash
+kitter preset file write frontend docs/conventions.md ./conventions.md
+kitter preset file write frontend .cursor/rules/swift.mdc - < swift.mdc
+kitter preset file list frontend
+kitter preset file read frontend docs/conventions.md
+kitter preset file rename frontend docs/conventions.md docs/team.md
+kitter preset file delete frontend docs/team.md
+```
+
+If an existing project file has different content, installation stops and lists the paths. After reviewing them, choose `--overwrite-conflicts` or `--skip-conflicts`. Skipped files stay untouched by later syncs and removal. `apply` is an alias for `install`.
+
+```bash
+kitter preset install frontend --project /path/to/project --target universal --skip-conflicts
+kitter preset sync frontend --project /path/to/project --overwrite-conflicts
+```
+
+Editing a preset does not change projects automatically. Inspect which projects need a sync, then apply the latest content:
+
+```bash
+kitter preset show frontend
+kitter preset sync frontend
+kitter preset sync frontend --project /path/to/project
+```
+
+If a preset file or the AGENTS.md preset content was edited inside a project, sync stops for that project. Confirm with the user before overwriting it with `--force`. New files can also need `--overwrite-conflicts` or `--skip-conflicts`.
+
+When a file is deleted from the preset, sync removes the project copy if it is unchanged. Edited copies are kept and left alone on later syncs.
+
+Remove a preset from one project, or delete it everywhere:
+
+```bash
+kitter preset uninstall frontend --project /path/to/project
+kitter preset delete frontend
+```
+
+Removing a preset removes its skills, its AGENTS.md content, and unchanged copies of its text files. Edited files and pre-existing folders are kept. Empty folders created for the preset's files are removed. Skills that the project installed directly, or that another installed preset still includes, are kept.
+
+Other commands: `kitter preset list`, `kitter preset rename <preset> <name>`, `kitter preset remove <preset> <skills>...`, `kitter preset agents-md <preset>` to print the content, and `kitter preset agents-md <preset> --clear`.
+
 ## Update skills
 
 Check managed skills for updates:
@@ -315,4 +396,5 @@ For complete command options, use the relevant help command:
 kitter --help
 kitter install --help
 kitter adopt --help
+kitter preset --help
 ```
